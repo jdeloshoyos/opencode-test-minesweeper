@@ -43,6 +43,7 @@ const optionsEl = document.getElementById("difficulty-options");
 const resultEl = document.getElementById("result");
 const resultTitleEl = document.getElementById("result-title");
 const resultSummaryEl = document.getElementById("result-summary");
+const resultBestEl = document.getElementById("result-best");
 
 // Per-game dimensions, set when a difficulty is chosen.
 let cols = 0;
@@ -62,11 +63,102 @@ let elapsedSeconds = 0;  // elapsed game time in whole seconds
 let resultTimeoutId = null; // pending end-of-game result-dialog timer
 
 // ---------------------------------------------------------------------------
+// Statistics (persisted in localStorage)
+// ---------------------------------------------------------------------------
+
+const STATS_KEY = "minesweeper.stats.v1";
+
+function createEmptyStats() {
+  const empty = {};
+  for (const key of Object.keys(DIFFICULTIES)) {
+    empty[key] = { played: 0, wins: 0, losses: 0, bestTime: null };
+  }
+  return empty;
+}
+
+function loadStats() {
+  const base = createEmptyStats();
+  try {
+    const raw = window.localStorage.getItem(STATS_KEY);
+    if (!raw) return base;
+    const stored = JSON.parse(raw);
+    for (const key of Object.keys(base)) {
+      const s = stored && stored[key];
+      if (!s || typeof s !== "object") continue;
+      if (Number.isFinite(s.played)) base[key].played = s.played;
+      if (Number.isFinite(s.wins)) base[key].wins = s.wins;
+      if (Number.isFinite(s.losses)) base[key].losses = s.losses;
+      if (Number.isFinite(s.bestTime)) base[key].bestTime = s.bestTime;
+    }
+  } catch (e) {
+    // localStorage unavailable or corrupt: fall back to empty stats.
+  }
+  return base;
+}
+
+function saveStats() {
+  try {
+    window.localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+  } catch (e) {
+    // Ignore storage failures; the game still works without persistence.
+  }
+}
+
+let stats = loadStats();
+let currentKey = null; // difficulty key of the game in progress
+
+function recordGameStarted(key) {
+  stats[key].played += 1;
+  saveStats();
+}
+
+function recordWin(key, seconds) {
+  const s = stats[key];
+  s.wins += 1;
+  const isNewBest = s.bestTime === null || seconds < s.bestTime;
+  if (isNewBest) s.bestTime = seconds;
+  saveStats();
+  return isNewBest;
+}
+
+function recordLoss(key) {
+  stats[key].losses += 1;
+  saveStats();
+}
+
+function formatPercent(numerator, denominator) {
+  if (denominator === 0) return "0%";
+  // Round half-up to at most one decimal, dropping a trailing ".0".
+  const percent = Math.round((numerator / denominator) * 1000) / 10;
+  return Number.isInteger(percent) ? percent + "%" : percent.toFixed(1) + "%";
+}
+
+function statsText(key) {
+  const s = stats[key];
+  const games = s.played + (s.played === 1 ? " game played" : " games played");
+  const wins = s.wins + (s.wins === 1 ? " win" : " wins") +
+    " (" + formatPercent(s.wins, s.played) + ")";
+  const losses = s.losses + (s.losses === 1 ? " loss" : " losses") +
+    " (" + formatPercent(s.losses, s.played) + ")";
+  const best = s.bestTime === null ? "--" : formatTime(s.bestTime);
+  return games + ", " + wins + ", " + losses + " - best time: " + best;
+}
+
+let statLines = {};
+
+function updateStatsLines() {
+  for (const key of Object.keys(statLines)) {
+    statLines[key].textContent = statsText(key);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Difficulty dialog
 // ---------------------------------------------------------------------------
 
 function buildDifficultyButtons() {
   optionsEl.innerHTML = "";
+  statLines = {};
   for (const [key, d] of Object.entries(DIFFICULTIES)) {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -81,15 +173,23 @@ function buildDifficultyButtons() {
     desc.className = "difficulty__desc";
     desc.textContent = d.blurb;
 
+    const statsEl = document.createElement("span");
+    statsEl.className = "difficulty__stats";
+
     btn.appendChild(name);
     btn.appendChild(desc);
+    btn.appendChild(statsEl);
     btn.addEventListener("click", () => startGame(key));
     optionsEl.appendChild(btn);
+
+    statLines[key] = statsEl;
   }
+  updateStatsLines();
 }
 
 function openDifficultyDialog() {
   closeResultDialog();
+  updateStatsLines();
   overlayEl.hidden = false;
 }
 
@@ -97,12 +197,14 @@ function closeDifficultyDialog() {
   overlayEl.hidden = true;
 }
 
-function showResult(kind) {
+function showResult(kind, isNewBest) {
   const won = kind === "won";
   resultTitleEl.textContent = won ? "You won!" : "Game over";
   resultTitleEl.className = "dialog__title " + (won ? "is-won" : "is-lost");
   resultSummaryEl.textContent =
     difficultyLabelEl.textContent + " \u00B7 " + formatTime(elapsedSeconds);
+  resultBestEl.hidden = !isNewBest;
+  if (isNewBest) resultBestEl.textContent = "New best time!";
   resultEl.hidden = false;
 }
 
@@ -160,6 +262,9 @@ function startGame(key) {
   rows = d.rows;
   mineCount = d.mines;
   difficultyLabelEl.textContent = d.label;
+
+  currentKey = key;
+  recordGameStarted(key);
 
   state = "playing";
   minesPlaced = false;
@@ -401,6 +506,13 @@ function endGame(kind) {
   stopTimer();
   newGameBtn.disabled = true;
 
+  let isNewBest = false;
+  if (kind === "won") {
+    isNewBest = recordWin(currentKey, elapsedSeconds);
+  } else {
+    recordLoss(currentKey);
+  }
+
   if (kind === "lost") {
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
@@ -414,7 +526,7 @@ function endGame(kind) {
   if (resultTimeoutId !== null) clearTimeout(resultTimeoutId);
   resultTimeoutId = setTimeout(() => {
     resultTimeoutId = null;
-    showResult(kind);
+    showResult(kind, isNewBest);
   }, RESULT_DELAY_MS);
 }
 

@@ -23,6 +23,7 @@ client-side web app.
 | [`interface.md`](interface.md) | Layout, controls, dialogs, styling, accessibility |
 | [`timer.md`](timer.md) | Elapsed-time counter |
 | [`architecture.md`](architecture.md) | Files, data model, key functions, algorithms |
+| [`statistics.md`](statistics.md) | Per-difficulty results persisted in localStorage |
 | [`decisions.md`](decisions.md) | Decision log and superseded requirements |
 | [`testing.md`](testing.md) | Acceptance scenarios and automated coverage |
 
@@ -35,6 +36,7 @@ client-side web app.
   - `UI-#` interface
   - `TM-#` timer
   - `AR-#` architecture
+  - `ST-#` statistics
   - `DC-#` decisions
   - `TS-#` testing scenarios
 - Behavioural specs use a `Requirement | Acceptance criteria` table.

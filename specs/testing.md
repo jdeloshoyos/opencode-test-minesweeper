@@ -32,6 +32,11 @@ automated coverage.
 | TS-21 | Observe the moment the game ends and the following second. | The result dialog is not shown at the instant the game ends; it appears about one second later. | GP-32 |
 | TS-22 | Watch the timer across the end of the game. | The timer is frozen from the instant the game ends, including during the pause before the dialog. | GP-33, TM-5 |
 | TS-23 | Press **New game** during the one-second pause. | Nothing happens — the difficulty dialog does not open. After the result dialog is dismissed and a new game starts, New game works again. | UI-20 |
+| TS-24 | Open the app for the first time (empty storage) and view the difficulty dialog. | Each difficulty shows `0 games played, 0 wins (0%), 0 losses (0%) - best time: --`. | ST-9, ST-10, ST-14 |
+| TS-25 | Start a game, abandon it with New game, then win one and lose one. | `played` counts all three; only the finished games add a win or a loss, so wins + losses may be less than played. | ST-2, ST-3, ST-5 |
+| TS-26 | Win a game, then win again more slowly, then beat the record. | Best time is set on the first win; the slower win does not change it; the faster win updates it. The "New best time!" line shows only for the first and record-breaking wins. | ST-4, ST-12 |
+| TS-27 | Reload the page after playing some games. | The counters and best times are unchanged; they persist across reloads. | ST-6 |
+| TS-28 | With 4 games played (2 wins, 1 loss), view the difficulty line; then check a ratio like 2 wins / 3 played. | The line reads `4 games played, 2 wins (50%), 1 loss (25%) - best time: …`, and the 2/3 case renders `66.7%` (one decimal, half-up; integers drop the decimal). | ST-9, ST-13, ST-14 |
 
 ## Automated coverage
 
@@ -60,6 +65,13 @@ A headless Node harness runs `script.js` against a minimal DOM stub and asserts:
   revealed, hit mine marked); the timer is stopped at the end condition; the New game
   button is disabled during the pause and re-enabled on a new game; a pending dialog is
   cleared if a new game starts first; board input is ignored during the pause.
+- **Statistics:** counters accumulate correctly (played on start, wins/losses on end);
+  best time keeps the lowest winning time; "new best" is true only for first/improving
+  wins; the stats-line text matches the expected format including `--` when there is no
+  best; percentages are `count / played`, rounded half-up to at most one decimal with
+  integers shown without a decimal and `0%` for zero games; stats are written to and read
+  from `localStorage` (with corrupt data falling back to empty); the difficulty stats
+  lines refresh when the dialog opens.
 
 ## Not covered by automation
 

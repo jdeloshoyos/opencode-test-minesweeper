@@ -20,6 +20,7 @@ diverges from the original brief. This is a record of *why*, not a behavioural s
 | DC-11 | **The result dialog reuses the difficulty dialog's styling** (same card over a blurred backdrop). | Visual consistency, as requested. | Current |
 | DC-12 | **Chording is gated on the flag count matching the cell's number** (classic behaviour), and is requested by double-clicking a numbered cell. | Requested feature. The initial description implied an unconditional chord (open unflagged neighbours whenever double-clicked); gating on `flags == number` is the standard Minesweeper rule and was chosen to require the player to have correctly flagged the cell first. | Current |
 | DC-13 | **The result dialog is delayed by about a second** after the game ends, while the board is updated immediately (mines revealed on loss). The timer still stops at the moment the game ends, and **New game is disabled during the pause**. | So the player can see what happened (e.g. the mine they hit) before the modal covers it. Blocking New game during the pause keeps the flow deterministic — the result is always acknowledged before a new game can begin. | Current |
+| DC-14 | **Results are kept in `localStorage`** (one versioned key) rather than any backend. `played` counts boards started, so abandoned games raise `played` without a win/loss; the best time is the lowest winning time. | Simplest persistence with no server. The trade-off is that stats are per-browser/device and reset when site data is cleared. Counting "played" on start (rather than first move) matches the requested "games started" wording and intentionally allows `wins + losses < played`. | Current |
 
 ## Superseded requirements timeline
 
@@ -33,4 +34,6 @@ diverges from the original brief. This is a record of *why*, not a behavioural s
    flag count matching the cell's number.
 6. **Enhancement (DC-13):** added a ~1-second pause before the result dialog so the
    final board (revealed mines) is visible; the timer still stops immediately.
-7. **This document set:** specs folder added as the source of truth for the above.
+7. **Enhancement (DC-14):** added per-difficulty results persisted in `localStorage`,
+   with stats shown on the difficulty buttons and a "new best time" notice on wins.
+8. **This document set:** specs folder added as the source of truth for the above.

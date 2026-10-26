@@ -28,6 +28,8 @@ these three files.
 | `flagCount` | number | Number of currently flagged cells. |
 | `exploded` | `{ r, c }` \| null | The mine the player hit, if any. |
 | `timerId`, `startTime`, `elapsedSeconds` | numbers | Timer state (see [timer](timer.md)). |
+| `stats` | object | Per-difficulty results (`played`, `wins`, `losses`, `bestTime`), loaded from and saved to `localStorage` (see [statistics](statistics.md)). |
+| `currentKey` | string \| null | Difficulty key of the game in progress. |
 
 ## Key functions
 
@@ -56,6 +58,15 @@ these three files.
 - `lose(r, c)` / `win()` — enter the end states and show the result dialog.
 - `endGame(kind)` — stops the timer, updates the board, and schedules the delayed result dialog (GP-31 … GP-33).
 
+**Statistics**
+
+- `loadStats` / `saveStats` — read and write the `minesweeper.stats.v1` `localStorage`
+  entry, tolerating unavailable/corrupt storage.
+- `recordGameStarted(key)` / `recordWin(key, seconds)` / `recordLoss(key)` — update the
+  per-difficulty counters and best time.
+- `statsText(key)` / `updateStatsLines()` — build and refresh the statistics lines on
+  the difficulty buttons.
+
 **Presentation & timer**
 
 - `render` — syncs the DOM cells with the model.
@@ -73,6 +84,7 @@ these three files.
 | AR-4 | Rendering is a full pass over the grid that resets each cell's classes and content from the model. | The DOM always reflects the model after a change. |
 | AR-5 | A chord reuses the normal reveal path for each neighbourhood cell it opens, so cells opened by a chord behave identically to manually revealed cells (including flood fill and the loss check). | Chorded cells reveal exactly as if clicked. |
 | AR-6 | End-of-game presentation is centralised in an `endGame(kind)` helper: it renders the final board, stops the timer, disables the New game button, and schedules the result dialog with `setTimeout(..., RESULT_DELAY_MS)` using a named constant (~1000 ms). `startGame` clears any pending timeout and re-enables New game. | The board updates immediately; the dialog appears only after the delay; a stale timeout never fires over a new game or the difficulty dialog. |
+| AR-7 | Statistics live in one versioned `localStorage` key (`minesweeper.stats.v1`) as JSON. Reads/writes are wrapped in `try/catch`, and loaded data is merged over defaults, so unavailable or corrupt storage degrades to empty statistics rather than breaking the game. | The game runs with zeroed stats when storage is blocked or invalid. |
 
 ## Event wiring
 
